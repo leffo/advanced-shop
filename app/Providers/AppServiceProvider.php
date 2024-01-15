@@ -27,15 +27,19 @@ class AppServiceProvider extends ServiceProvider
         Model::preventSilentlyDiscardingAttributes(!app()->isProduction());
 
         DB::whenQueryingForLongerThan(500, function (Connection $connection) {
-
+            logger()
+                ->channel('telegram')
+                ->debug('whenQueryingForLongerThan:' . $connection->query()->toSql());
         });
 
         $kernel = app(Kernel::class);
+
         $kernel->whenRequestLifecycleIsLongerThan(
             CarbonInterval::seconds(4),
-            function ()
-            {
-
+            function () {
+                logger()
+                    ->channel('telegram')
+                    ->debug('whenQueryingForLongerThan:' . request()->url());
             }
         );
     }
