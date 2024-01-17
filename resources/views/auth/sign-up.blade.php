@@ -3,13 +3,14 @@
 @section('title', 'Вход в аккаунт')
 
 @section('content')
-    <x-forms.auth-forms title="Регистрация" action="">
+    <x-forms.auth-forms title="Регистрация" action="{{ route('store') }}" method="POST">
         @csrf
 
         <x-forms.text-input
                 name="name"
                 type="text"
                 placeholder="Имя"
+                value="{{ old('name') }}"
                 required="true"
                 :isError="$errors->has('name')"
         />
@@ -25,6 +26,7 @@
                 type="email"
                 placeholder="E-mail"
                 required="true"
+                value="{{ old('email') }}"
                 :isError="$errors->has('email')"
         />
 

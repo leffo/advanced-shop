@@ -8,7 +8,8 @@ class SignInFormRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->guest();
+//        return auth()->guest();
+        return true;
     }
 
     /**

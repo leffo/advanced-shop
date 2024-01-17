@@ -3,7 +3,9 @@
 @section('title', 'Сброс пароля')
 
 @section('content')
-    <x-forms.auth-forms title="Сброс пароля" action="">
+    <x-forms.auth-forms title="Сброс пароля" action="" method="POST">
+        @csrf
+
         <x-forms.text-input
                 name="email"
                 type="email"
