@@ -2,20 +2,30 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ForgotPasswordFormRequest;
+use App\Http\Requests\ResetPsswordFormRequest;
 use App\Http\Requests\SignInFormRequest;
 use App\Http\Requests\SignUpFormRequest;
 use App\Models\User;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
+use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
-    public function index()
+    public function index(): View|Application|Factory
     {
         return view('auth.index');
     }
 
-    public function signUp()
+    public function signUp(): View|Application|Factory
     {
         return view('auth.sign-up');
     }
@@ -57,5 +67,71 @@ class AuthController extends Controller
         request()->session()->regenerateToken();
 
         return redirect()->route('home');
+    }
+
+    public function forgot()
+    {
+        return view('auth.forgot-password');
+    }
+
+    public function forgotPassword(ForgotPasswordFormRequest $request): RedirectResponse
+    {
+        $status = Password::sendResetLink(
+            $request->only('email')
+        );
+
+        return $status === Password::RESET_LINK_SENT
+            ? back()->with(['message' => __($status)])
+            : back()->withErrors(['email' => __($status)]);
+    }
+
+    public function reset(string $token): View|Application|Factory
+    {
+        return view('auth.reset-password', [
+            'token' => $token
+        ]);
+    }
+
+    public function resetPassword(ResetPsswordFormRequest $request): RedirectResponse
+    {
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function (User $user, string $password) {
+                $user->forceFill([
+                    'password' => bcrypt($password)
+                ])->setRememberToken(Str::random(60));
+
+                $user->save();
+
+                event(new PasswordReset($user));
+            }
+        );
+
+        return $status === Password::PASSWORD_RESET
+            ? redirect()->route('login')->with('message', __($status))
+            : back()->withErrors(['email' => [__($status)]]);
+    }
+
+    public function github(): \Symfony\Component\HttpFoundation\RedirectResponse|RedirectResponse
+    {
+        return Socialite::driver('github')->redirect();
+    }
+
+    public function githubCallback(): RedirectResponse
+    {
+        $githubUser = Socialite::driver('github')->user();
+
+        $user = User::updateOrCreate([
+            'github_id' => $githubUser->id,
+        ], [
+            'name' => $githubUser->name,
+            'email' => $githubUser->email,
+            'password' => bcrypt(str()->random(20)),
+        ]);
+
+        auth()->login($user);
+
+        return redirect()
+            ->intended(route('home'));
     }
 }
